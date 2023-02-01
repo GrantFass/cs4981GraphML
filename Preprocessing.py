@@ -66,7 +66,7 @@ class Preprocessor:
     # define nlp as a variable so the preprocessor size list can be specified dynamically based on file.
     nlp = 0
     
-    def __init__(self, size: int):
+    def __init__(self, size: int, trigrams=False):
         """This is the constructor for the preprocessor class. This is mainly used for defining the size of the preprocessor to use as stored in the `nlp` variable.
         Furthermore, this method makes sure that the named entity recognition pipeline step and the merge noun chunks step are both added to the pipeline.
         The merge noun chunks step comes from [a stackoverflow post about bigrams and trigrams consolidation](https://stackoverflow.com/questions/53598243/is-there-a-bi-gram-or-tri-gram-feature-in-spacy).
@@ -89,9 +89,10 @@ class Preprocessor:
         new_name = 'ner'
         if not new_name in self.nlp.pipe_names:
             self.nlp.add_pipe(new_name, config=config)
-        new_name = 'merge_noun_chunks'
-        if not new_name in self.nlp.pipe_names:
-            self.nlp.add_pipe(new_name)
+        if trigrams:
+            new_name = 'merge_noun_chunks'
+            if not new_name in self.nlp.pipe_names:
+                self.nlp.add_pipe(new_name)
         
     def remove_stop_words(self, stop_words: list[str]):
         """This method is used to remove certain words from the list of stop words present in the SpaCy list of stop words to remove from the text.
