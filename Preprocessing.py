@@ -61,6 +61,8 @@ import contractions
 from word2number import w2n
 from bs4 import BeautifulSoup
 import re
+from collections import Counter
+from nltk.corpus import stopwords
 
 class Preprocessor:
     # define nlp as a variable so the preprocessor size list can be specified dynamically based on file.
@@ -111,27 +113,6 @@ class Preprocessor:
         """
         for stop_word in stop_words:
             self.nlp.vocab[stop_word].is_stop = True
-            
-    def strip_html_tags(self, text: str):
-        """remove html tags from text"""
-        soup = BeautifulSoup(text, "html.parser")
-        stripped_text = soup.get_text(separator=" ")
-        return stripped_text
-
-    def remove_accented_chars(self, text: str):
-        """remove accented characters from text, e.g. café"""
-        text = unidecode.unidecode(text)
-        return text
-
-    def expand_contractions(self, text: str):
-        """expand shortened words, e.g. don't to do not"""
-        text = contractions.fix(text)
-        return text
-
-    def remove_whitespace(self, text: str):
-        """remove extra whitespaces from text"""
-        text = text.strip()
-        return " ".join(text.split())
 
     def add_spaces_around_parens(self, text: str, remove_actions=True):
         """Method to add spaces around parentheses. This will add the spaces to the outside of the parentheses and not affect the content inside the parentheses.
@@ -150,112 +131,155 @@ class Preprocessor:
         text = text.replace("(", " (")
         text = text.replace(")", ") ")
         return text.replace("  ", ' ')
-
-    def fix_punctuation_spacing(self, text: str):
-        """Method to fix the spacing around punctuations. This is mostly used to add spaces after periods and commas.
-        The regex in this method was sourced from [a stackoverflow post](https://stackoverflow.com/questions/44263446/python-regex-to-add-space-after-dot-or-comma)
-
-        Args:
-            text (str): the text to update the spacing around punctuations.
-
-        Returns:
-            str: the cleaned up text.
-        """
-        text = re.sub(r'(?<=[\.\,\?])(?=[^\s])', r' ', text)
-        return text
     
-    def strip_punctuation(self, text: str):
-        """Method to strip the punctuation from a string
-        
-        Args:
-            text (str): the text to strip punctuation from
-            
-        Returns:
-            str: the cleaned up text
-        """
-        return re.sub(r'[\.\,\?\\\/\<\>\;\:\[\]\{\}]', r'', text)
+    def clean_base(self, x: str):
+        # remove any html tags
+        x = BeautifulSoup(x, "html.parser").get_text(separator=" ")
+        # set all to lower
+        x = x.lower()
+        # clean up the contractions
+        x = contractions.fix(x)
+        # remove accended characters
+        x = unidecode.unidecode(x)
+        # remove stopwords: https://stackoverflow.com/questions/19560498/faster-way-to-remove-stop-words-in-python
+        cachedStopWords = Counter(stopwords.words('english'))
+        x = ' '.join([word for word in x.split() if word not in cachedStopWords]) # slower to use word tokenize
+        # # fix punctuation spacing
+        # x = re.sub(r'(?<=[\.\,\?])(?=[^\s])', r' ', x)
+        # # strip punctuation
+        # x = re.sub(r'[\.\,\?\\\/\<\>\;\:\[\]\{\}]', r'', x)
+        # strip quotes
+        x = x.replace('\'', '').replace('\"', '')
+        # remove some actions
+        remove_list = ['(Laughter)', '(laughter)', '(Music)', '(music)', '(Music ends)', '(Audience cheers)', '(Applause)', '(Applause ends)', '(Applause continues)', '(Bells)', '(Trumpet)', '(Clears throat)']
+        x = ' '.join([word for word in x.split() if word not in remove_list])
+        # remove extraneous items
+        x = x.replace(' -- ', '').replace(' .. ', ' ').replace(' ... ', ' ')
+        # remove extra whitespace
+        x = ' '.join(x.strip().split())
+        return x
     
-    def clean(self, text: str, accented_chars=True, contractions=True, 
-                       convert_num=True, extra_whitespace=True, 
-                       lemmatization=True, remove_short_words=True, lowercase=True, punctuations=True,
-                       remove_html=True, remove_num=True, special_chars=True, 
-                       stop_words=True, get_doc=False):
-        """Method to clean up and preprocess text to a standard format.
-
-        Args:
-            text (str): the text to clean up
-            accented_chars (bool, optional): defines if accented characters are removed / standardized. Defaults to True.
-            contractions (bool, optional): defines if contractions are expanded. Defaults to True.
-            convert_num (bool, optional): defines if numbers are standardized to their word form. Defaults to True.
-            extra_whitespace (bool, optional): defines if extra whitespace is removed. Defaults to True.
-            lemmatization (bool, optional): defines if the text is lemamtized. Defaults to True.
-            remove_short_words (bool, optional): defines if words under a certain length are removed. Defaults to True.
-            lowercase (bool, optional): defines if text is defaulted to lowercase. Defaults to True.
-            punctuations (bool, optional): defines if punctuation is removed. Defaults to True.
-            remove_html (bool, optional): defines if HTML tags are removed. Defaults to True.
-            remove_num (bool, optional): defines if numbers should be removed. Defaults to True.
-            special_chars (bool, optional): defines if special characters should be removed. Defaults to True.
-            stop_words (bool, optional): defines if stop words should be removed. Defaults to True.
-            get_doc (bool, optional): defines if the method should return the SpaCy document or return the cleaned text directly. Defaults to False.
-            
-        Returns:
-            Returned value depends on the value of the get_doc method. 
-            If the value is True the function will return the SpaCy doc directly. 
-            Othewise the function will return the cleaned up text.
-            str: the cleaned up text.
-            spacy.tokens.doc.Doc: the SpaCy document file.
-        """
-        text = self.add_spaces_around_parens(text)
-        text = self.fix_punctuation_spacing(text)
-        if remove_html == True: #remove html tags
-            text = self.strip_html_tags(text)
-        if extra_whitespace == True: #remove extra whitespaces
-            text = self.remove_whitespace(text)
-        if accented_chars == True: #remove accented characters
-            text = self.remove_accented_chars(text)
-        if contractions == True: #expand contractions
-            text = self.expand_contractions(text)
-        if lowercase == True: #convert all characters to lowercase
-            text = text.lower()
-            
-        if punctuations == True:
-            text = self.strip_punctuation(text)
-            
-
-        doc = self.nlp(text) #tokenise text
-
-        clean_text = []
-        
-        for token in doc:
-            flag = True
-            edit = token.text
-            # remove stop words
-            if stop_words == True and token.is_stop and token.pos_ != 'NUM': 
-                flag = False
-            # remove punctuations
-            if punctuations == True and token.pos_ == 'PUNCT' and flag == True: 
-                flag = False
-            # remove special characters
-            if special_chars == True and token.pos_ == 'SYM' and flag == True: 
-                flag = False
-            # remove numbers
-            if remove_num == True and (token.pos_ == 'NUM' or token.text.isnumeric()) \
-            and flag == True:
-                flag = False
-            # convert number words to numeric numbers
-            if convert_num == True and token.pos_ == 'NUM' and flag == True:
-                edit = w2n.word_to_num(token.text)
-                token.text = edit # may cause issues. Unsure
-            # convert tokens to base form
-            elif lemmatization == True and token.lemma_ != "-PRON-" and flag == True:
-                edit = token.lemma_
-            # append tokens edited and not removed to list 
-            if edit != "" and flag == True and (remove_short_words == True and len(token.text) > 3):
-                clean_text.append(edit)    
-        if not get_doc:    
-            return clean_text
-        else:
+    def clean(self, text: str, tokenize=False, verbose_tokenize=False, fast=False):
+        text = self.clean_base(text)
+        if not tokenize and not fast:
+            doc = self.nlp(text)
             return doc
+        elif verbose_tokenize and tokenize:
+            doc = self.nlp(text)
+            clean_text = []
+            for token in doc:
+                flag = True
+                edit = token.text
+                # remove stop words
+                if token.is_stop and token.pos_ != 'NUM': 
+                    flag = False
+                # remove punctuations
+                if token.pos_ == 'PUNCT' and flag == True: 
+                    flag = False
+                # remove special characters
+                if token.pos_ == 'SYM' and flag == True: 
+                    flag = False
+                # remove numbers
+                if (token.pos_ == 'NUM' or token.text.isnumeric()) \
+                and flag == True:
+                    flag = False
+                # convert number words to numeric numbers
+                if token.pos_ == 'NUM' and flag == True:
+                    edit = w2n.word_to_num(token.text)
+                    token.text = edit # may cause issues. Unsure
+                # convert tokens to base form
+                elif token.lemma_ != "-PRON-" and flag == True:
+                    edit = token.lemma_
+                # append tokens edited and not removed to list 
+                if edit != "" and flag == True and len(token.text) > 3:
+                    clean_text.append(edit)    
+            return clean_text
+        elif not verbose_tokenize and tokenize:
+            return text.split()
+        else:
+            return text
+    
+    # def clean(self, text: str, accented_chars=True, contractions=True, 
+    #                    convert_num=True, extra_whitespace=True, 
+    #                    lemmatization=True, remove_short_words=True, lowercase=True, punctuations=True,
+    #                    remove_html=True, remove_num=True, special_chars=True, 
+    #                    stop_words=True, get_doc=False):
+    #     """Method to clean up and preprocess text to a standard format.
+
+    #     Args:
+    #         text (str): the text to clean up
+    #         accented_chars (bool, optional): defines if accented characters are removed / standardized. Defaults to True.
+    #         contractions (bool, optional): defines if contractions are expanded. Defaults to True.
+    #         convert_num (bool, optional): defines if numbers are standardized to their word form. Defaults to True.
+    #         extra_whitespace (bool, optional): defines if extra whitespace is removed. Defaults to True.
+    #         lemmatization (bool, optional): defines if the text is lemamtized. Defaults to True.
+    #         remove_short_words (bool, optional): defines if words under a certain length are removed. Defaults to True.
+    #         lowercase (bool, optional): defines if text is defaulted to lowercase. Defaults to True.
+    #         punctuations (bool, optional): defines if punctuation is removed. Defaults to True.
+    #         remove_html (bool, optional): defines if HTML tags are removed. Defaults to True.
+    #         remove_num (bool, optional): defines if numbers should be removed. Defaults to True.
+    #         special_chars (bool, optional): defines if special characters should be removed. Defaults to True.
+    #         stop_words (bool, optional): defines if stop words should be removed. Defaults to True.
+    #         get_doc (bool, optional): defines if the method should return the SpaCy document or return the cleaned text directly. Defaults to False.
+            
+    #     Returns:
+    #         Returned value depends on the value of the get_doc method. 
+    #         If the value is True the function will return the SpaCy doc directly. 
+    #         Othewise the function will return the cleaned up text.
+    #         str: the cleaned up text.
+    #         spacy.tokens.doc.Doc: the SpaCy document file.
+    #     """
+    #     text = self.add_spaces_around_parens(text)
+    #     text = self.fix_punctuation_spacing(text)
+    #     if remove_html == True: #remove html tags
+    #         text = self.strip_html_tags(text)
+    #     if extra_whitespace == True: #remove extra whitespaces
+    #         text = self.remove_whitespace(text)
+    #     if accented_chars == True: #remove accented characters
+    #         text = self.remove_accented_chars(text)
+    #     if contractions == True: #expand contractions
+    #         text = self.expand_contractions(text)
+    #     if lowercase == True: #convert all characters to lowercase
+    #         text = text.lower()
+            
+    #     if punctuations == True:
+    #         text = self.strip_punctuation(text)
+            
+
+    #     doc = self.nlp(text) #tokenise text
+
+    #     clean_text = []
+        
+    #     for token in doc:
+    #         flag = True
+    #         edit = token.text
+    #         # remove stop words
+    #         if stop_words == True and token.is_stop and token.pos_ != 'NUM': 
+    #             flag = False
+    #         # remove punctuations
+    #         if punctuations == True and token.pos_ == 'PUNCT' and flag == True: 
+    #             flag = False
+    #         # remove special characters
+    #         if special_chars == True and token.pos_ == 'SYM' and flag == True: 
+    #             flag = False
+    #         # remove numbers
+    #         if remove_num == True and (token.pos_ == 'NUM' or token.text.isnumeric()) \
+    #         and flag == True:
+    #             flag = False
+    #         # convert number words to numeric numbers
+    #         if convert_num == True and token.pos_ == 'NUM' and flag == True:
+    #             edit = w2n.word_to_num(token.text)
+    #             token.text = edit # may cause issues. Unsure
+    #         # convert tokens to base form
+    #         elif lemmatization == True and token.lemma_ != "-PRON-" and flag == True:
+    #             edit = token.lemma_
+    #         # append tokens edited and not removed to list 
+    #         if edit != "" and flag == True and (remove_short_words == True and len(token.text) > 3):
+    #             clean_text.append(edit)    
+    #     if not get_doc:    
+    #         return clean_text
+    #     else:
+    #         return doc
         
     def read_vtt_as_text(self, filepath: str):
         """Method to read in a VTT transcript file and convert it to a string.
