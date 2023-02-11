@@ -151,7 +151,7 @@ class Preprocessor:
         # strip quotes
         x = x.replace('\'', '').replace('\"', '')
         # remove some actions
-        remove_list = ['[Instructor]', '[Voiceover]', '[instructor]', '[voiceover]', '(Laughter)', '(laughter)', '(Music)', '(music)', '(Music ends)', '(Audience cheers)', '(Applause)', '(Applause ends)', '(Applause continues)', '(Bells)', '(Trumpet)', '(Clears throat)']
+        remove_list = ['\\r\\n', '\r\n', '[Instructor]', '[Voiceover]', '[instructor]', '[voiceover]', '(Laughter)', '(laughter)', '(Music)', '(music)', '(Music ends)', '(Audience cheers)', '(Applause)', '(Applause ends)', '(Applause continues)', '(Bells)', '(Trumpet)', '(Clears throat)']
         x = ' '.join([word for word in x.split() if word not in remove_list])
         # remove extraneous items
         x = x.replace(' -- ', '').replace(' .. ', ' ').replace(' ... ', ' ')
