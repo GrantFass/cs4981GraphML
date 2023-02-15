@@ -8,6 +8,7 @@ The primary goal of the final project is to identify a way to apply graph machin
 
 ## Abstract:
 ***Describe the problem that you are solving, why it's an interesting problem, and why it's an important problem. Clearly state your hypothesis, what your contribution is, and how you will measure results. Provide a sentence summary of results.***
+I am attempting to train a supervised topic modeling network using graph machine learning. Current topic modeling networks such as LDA are unsupervised. They are used for clustering a pre-determined number of documents. This does not work well when documents fall into many of the same topics or there is a lot of topic overlap. Additionally, these models only return keywords that represent each topic and do not encode contextual information. My goal is to train a graphical network with each node representing a document. This node would contain the encoded representation of the text for the entire document as well as tag keywords that represent the document. This allows for the prediction of keywords by searching for the most similar documents. I hypothesize that this graphical approach will perform better than a non-graphical network. The primary measurement of model performance will be either f1 score or ROC_AUC_SCORE. Unfortunately, I did not get to the graphical representation stage as I pursued the wrong dataset for too long. This was then followed by multiclass classification output issues during training that prevented completion of models.
 
 
 ## Introduction:
@@ -62,11 +63,34 @@ I did try to train a model on the Khan Academy dataset originally. This was done
 
 The next step was to go back to the drawing board and attempt to recreate this process using the TedTalk dataset. Beacuse each transcript had a collection of keywords and other information I figured that it would be better off to model this problem using document based encodings instead of sentence based encodings. This would let me model each Ted Talk transcript document as a node during the graphical representation step. By having each talk be a node I could then use the 'related_talks' feature to connect the given nodes together. 
 
+Each of the documents in the Ted Talk dataset can be encoded using a Doc2Vec model. This model is trained using the "text8" dataset from gensim. During the training stage we can specify the size of the resulting vector encoding as a hyperparameter. This allows us to fine tune our encodings later on. We can then use the `infer_vector` method of the model to get the encoding for the tokens that represent each transcript. 
+
+Next we need to encode our target keywords, also known as our tags. This is done using the [Scikit Learn Multi Label Binarizer](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MultiLabelBinarizer.html). This module functions similarly to a one hot encoder, but for multi-label classification. We first set up the MultiLabelBinarizer using a set of all unique tags. This comes out to 415 unique tag words in the dataset. Next we use the transform function to transform our stored tags into the corresponding tag vector encodings.
+
+At this stage we now have a method of encoding our text and a method of encoding our tags. This means we now have the two features we need to set up a normal model. See this in the `TedTalkModel.ipynb` notebook.
+
+### Training a Graph Model
+Unfortunately, I did not reach this stage. This can be attributed to two reasons. The first is that I spent a lot of time using the Khan Academy dataset instead of the Ted Talk dataset. This resulted in needing to redo work once I switched to the more appropriate dataset. The second reason is that when using the TedTalk dataset I got stuck during the model training phase due to trying to predict multiclass outputs.
+
 ## Results:
 ***Document your experimental trials in tabular and graphical format. Provide your best interpretation of results.***
 
+***Khan Academy Simple Model***
+| Metric    | Value |
+|-----------|-------|
+| ROC_AUC   | 0.85  |
+| F1        | 0.78  |
+| Accuracy  | 0.84  |
+| Precision | 0.74  |
+| Recall    | 0.84  |
+
 ## Conclusion:
 ***Summarize your hypothesis, experiment and results.***
+As shown by the `node_embedding.ipynb` notebook using the Khan Academy dataset, it is possible to create a model that predicts topics based on sentence embeddings. The model that was trained in the afforementioned notebook was very simple. It listed the same label for each sentence in a document. It also only classified as a deterministic one-vs-rest classification. This yielded an $85%$ ROC_AUC_SCORE.
+
+This model could be improved by giving a topic label for each sentence instead of the entire document. It could also be improved by expanding the number of available label topics to classify against. It should then use a probabilistic approach to classification so that it can return multiple labels for each sentence and or document. These changes would help this model function more like the LDA model it was attempting to emulate.
+
+The `TedTalkModel.ipynb` notebook had fewer conclusions. It was primarily constrained due to time and knowledge. What it accomplished was showing that it is possible to encode entire documents into a variablly sized embedding. It also showed that we can have multiple topics (tags) for each document that we try to predict. This notebook did not make any further progress than that due to getting stuck troubleshooting errors.
 
 ## References:
 ***Provide proper attribution to all of your sources***
@@ -83,3 +107,5 @@ The next step was to go back to the drawing board and attempt to recreate this p
 - [Albert Au Yeung BERT Tokenization](https://albertauyeung.github.io/2020/06/19/bert-tokenization.html/)
 - [StackOverflow Which document embedding model for document similarity](https://stackoverflow.com/questions/65027694/which-document-embedding-model-for-document-similarity)
 - [Top2Vec Documentation](https://top2vec.readthedocs.io/_/downloads/en/stable/pdf/)
+- [Medium Combining Word Embeddings to form Document Embeddings](https://medium.com/analytics-vidhya/combining-word-embeddings-to-form-document-embeddings-9135a66ae0f)
+- [TutorialsPoint gensim doc2vec](https://www.tutorialspoint.com/gensim/gensim_doc2vec_model.htm)
