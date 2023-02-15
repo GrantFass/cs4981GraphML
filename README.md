@@ -51,6 +51,17 @@ Once the model is trained we want to visualize it. This can be done through usin
 
 We can then run a simple 'test' against this model by performing an inference with a given document. This returns a list of predicted topic numbers and proportions. This allows us to select the topic number witht he highest probability. We can then reverse lookup that topic number to get the keywords that correspond to that topic.
 
+This process was performed in the `KhanAcademyDatasetSetup.ipynb` and `TedTalkDatasetSetup.ipynb` notebook files.
+
+### Training a 'normal' model
+In order to train a supervised machine learning model we need two things. The first is to convert our string representation into a numerical representation. The second is to have some sort of ground truth or target that we can use to attempt to predict. In the case of the Khan Academy dataset we have an abundance of possible targets. We could set the target to one of the five domains or even one of the ~20 courses. Unfortunatly, this would not really help us produce keywords. It would also present us with an issue in the future where we could not really expand the model to use a graph. This is due to the Khan Academy dataset not really having enough information to encode a graphical representation. 
+
+Instead it would be better to train a model using the Ted Talk dataset. This is primarily due to the 'related_talks' feature which would let us encode the data as a graphical representation. Additionally each video already has a defined set of keywords in the 'tags' feature. The hardest part will be training a model so that we can use these multiple tags as output. Fortunatly there are some resources on this such as a [StackOverflow Post](https://stats.stackexchange.com/questions/467633/what-exactly-is-multi-hot-encoding-and-how-is-it-different-from-one-hot) and a [Scikit Learn Library](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MultiLabelBinarizer.html).
+
+I did try to train a model on the Khan Academy dataset originally. This was done by creating a record for each sentence across all of the documents after limiting the number of documents to $5000$ due to memory constraints. This turned the $5000$ records representing documents into $355,320$ records representing sentences. Each of these sentences was then encoded using the google universal sentence encoder. This encoder was loaded through tensorflow hub. It turns each sentence into a vector of 512 features. At this point I had a label, from the domain, and an embedding for each sentence. I then reduced the dimensionality using PCA and trained a random forest model. This ended up yielding an $85%$ ROC_AUC_SCORE. As I alluded to earlier, I then got stuck because I could not model relationships between each of the sentence records. More about this process can be found in the `node_embedding.ipynb` notebook.
+
+The next step was to go back to the drawing board and attempt to recreate this process using the TedTalk dataset. Beacuse each transcript had a collection of keywords and other information I figured that it would be better off to model this problem using document based encodings instead of sentence based encodings. This would let me model each Ted Talk transcript document as a node during the graphical representation step. By having each talk be a node I could then use the 'related_talks' feature to connect the given nodes together. 
+
 ## Results:
 ***Document your experimental trials in tabular and graphical format. Provide your best interpretation of results.***
 
@@ -65,3 +76,10 @@ We can then run a simple 'test' against this model by performing an inference wi
 - [ACM A partially supervised cross-collection topic model for cross-domain text classification](https://dl.acm.org/doi/abs/10.1145/2505515.2505556?casa_token=QOvCU3JcODYAAAAA:DT6bO0lWauhFjkWaoc-_xywEkMeK17u1xMyk0ZCbMCDeV0IMTp4STnkndrSvldEBa2Ddm6KKvQ)
 - [ScienceDirect A graphical decomposition and similarity measurement approach for topic detection from online news](https://www.sciencedirect.com/science/article/pii/S002002552100356X?casa_token=FLD9zivf578AAAAA:pAX26PY_2X7d1R0PhuN_ItgGsf1n_fOZGj34pNvF9nai3nrFa3X0f4sxILV5NJStvfIIyKA)
 - [Powerpoint on Graph models and topic modeling](https://viasm.edu.vn/Cms_Data/Contents/Viasm-EN/Media/file/L5-Graphical-Model-and-TopicModeling.pdf)
+- [StackOverflow Multi-hot encoding](https://stats.stackexchange.com/questions/467633/what-exactly-is-multi-hot-encoding-and-how-is-it-different-from-one-hot)
+- [Scikit Learn Multi Label Binarizer](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MultiLabelBinarizer.html)
+- [GeeksForGeeks Universal Sentence Encoder Python](https://www.geeksforgeeks.org/word-embedding-using-universal-sentence-encoder-in-python/)
+- [Medium Using BERT for classifying documents with long texts](https://medium.com/@armandj.olivares/using-bert-for-classifying-documents-with-long-texts-5c3e7b04573d)
+- [Albert Au Yeung BERT Tokenization](https://albertauyeung.github.io/2020/06/19/bert-tokenization.html/)
+- [StackOverflow Which document embedding model for document similarity](https://stackoverflow.com/questions/65027694/which-document-embedding-model-for-document-similarity)
+- [Top2Vec Documentation](https://top2vec.readthedocs.io/_/downloads/en/stable/pdf/)

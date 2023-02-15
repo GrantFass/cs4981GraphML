@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 khan_joined.csv
+ted_joined.csv
 
 # C extensions
 *.so
