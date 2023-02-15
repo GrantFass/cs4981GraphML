@@ -152,7 +152,9 @@ class Preprocessor:
         x = x.replace('\'', '').replace('\"', '')
         # remove some actions
         remove_list = ['\\r\\n', '\r\n', '[Instructor]', '[Voiceover]', '[instructor]', '[voiceover]', '(Laughter)', '(laughter)', '(Music)', '(music)', '(Music ends)', '(Audience cheers)', '(Applause)', '(Applause ends)', '(Applause continues)', '(Bells)', '(Trumpet)', '(Clears throat)']
-        x = ' '.join([word for word in x.split() if word not in remove_list])
+        for word in remove_list:
+            x = x.replace(word, ' ')
+        # x = ' '.join([word for word in x.split() if word not in remove_list])
         # remove extraneous items
         x = x.replace(' -- ', '').replace(' .. ', ' ').replace(' ... ', ' ')
         # remove extra whitespace
